@@ -5,6 +5,10 @@ import com.idetidev.API_VERSION
 import com.idetidev.auth.JwtService
 import com.idetidev.auth.MySession
 import com.idetidev.repository.Repository
+import com.idetidev.usercase.model.response.BaseResponse
+import com.idetidev.usercase.model.response.CustomError
+import com.idetidev.usercase.model.response.JWTResponse
+import com.idetidev.usercase.model.response.UserResponse
 
 import io.ktor.application.application
 import io.ktor.application.call
@@ -17,7 +21,6 @@ import io.ktor.locations.delete
 import io.ktor.locations.post
 import io.ktor.request.receive
 import io.ktor.response.respond
-import io.ktor.response.respondText
 import io.ktor.routing.Route
 import io.ktor.sessions.sessions
 import io.ktor.sessions.set
@@ -48,24 +51,25 @@ class UserDeleteRoute
 fun Route.users(db: Repository, jwtService: JwtService, hashFunction: (String) -> String) {
     post<UserLoginRoute> {
         val signinParameters = call.receive<Parameters>()
+        val userName = signinParameters["userName"] ?: return@post call.respond(HttpStatusCode.Unauthorized, "Missing Fields")
         val password = signinParameters["password"] ?: return@post call.respond(HttpStatusCode.Unauthorized, "Missing Fields")
-        val email = signinParameters["email"] ?: return@post call.respond(HttpStatusCode.Unauthorized, "Missing Fields")
-
         val hash = hashFunction(password)
-
         try {
-            val currentUser = db.findUserByEmail(email)
-            currentUser?.userId?.let {
-                if (currentUser.passwordHash == hash) {
-                    call.sessions.set(MySession(it))
-                    call.respondText(jwtService.generateToken(currentUser))
-                } else {
-                    call.respond(HttpStatusCode.BadRequest, "Problems retrieving User")
-                }
+            val currentUser = db.findUser(userName, hash)
+            currentUser?.let {
+                call.sessions.set(MySession(it.userId))
+                val token = jwtService.generateToken(it)
+
+                val userResponse = UserResponse (displayName = it.displayName, userName = it.username, token = token)
+                val baseResponse: BaseResponse <UserResponse> = BaseResponse(userResponse, HttpStatusCode.OK, 200)
+                db.saveToken (token, it.username)
+                call.respond(baseResponse)
             }
         } catch (e: Throwable) {
-            application.log.error("Failed to register user", e)
-            call.respond(HttpStatusCode.BadRequest, "Problems retrieving User")
+            application.log.error("Failed to loggin user", e)
+            val errorMessage = CustomError ("Problem with loggin", e.message!! )
+            val baseResponse: BaseResponse <CustomError> = BaseResponse(errorMessage, HttpStatusCode.BadRequest, 400)
+            call.respond(baseResponse)
         }
     }
     post<UserLogoutRoute> {
@@ -111,11 +115,15 @@ fun Route.users(db: Repository, jwtService: JwtService, hashFunction: (String) -
             val newUser = db.addUser(email, displayName, hash, userName)
             newUser?.userId?.let {
                 call.sessions.set(MySession(it))
-                call.respondText(jwtService.generateToken(newUser), status = HttpStatusCode.Created)
+                val baseResponse  = BaseResponse( null,HttpStatusCode.Created, 200)
+                call.respond(baseResponse)
             }
         } catch (e: Throwable) {
             application.log.error("Failed to register user", e)
-            call.respond(HttpStatusCode.BadRequest, "Problems creating User")
+            val errorMessage = CustomError ("Problems creating User", e.message!! )
+            val baseResponse: BaseResponse <CustomError> = BaseResponse(errorMessage, HttpStatusCode.BadRequest, 400)
+            call.respond(baseResponse)
         }
     }
 }
+

@@ -9,5 +9,6 @@ object UserDB: Table() {
     val userName = varchar("user_name", 64).uniqueIndex()
     val displayName = varchar("display_name", 256)
     val passwordHash = varchar("password_hash", 64)
+    val jwtToken = varchar("token", 500)
 
 }

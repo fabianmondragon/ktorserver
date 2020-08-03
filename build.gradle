@@ -49,6 +49,9 @@ dependencies {
     compile "org.postgresql:postgresql:$postgres_version"
     compile "com.zaxxer:HikariCP:$hikaricp_version"
 
+    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.11.1'
+
+
 }
 
 task stage(dependsOn: ['assembleShadowDist'])

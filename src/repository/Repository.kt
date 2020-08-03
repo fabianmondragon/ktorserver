@@ -9,4 +9,6 @@ interface Repository {
     suspend fun findUser(userId: Int): User?
     suspend fun findUserByEmail(email: String): User?
     suspend fun deleteUser(userId: Int)
+    suspend fun findUser(userName: String, passwordHash: String):User?
+    suspend fun saveToken(token:String, userName: String)
 }

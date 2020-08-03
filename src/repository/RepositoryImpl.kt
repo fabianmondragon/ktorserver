@@ -3,10 +3,11 @@ package com.idetidev.repository
 import com.idetidev.data.model.DatabaseFactory.dbQuery
 import com.idetidev.data.model.UserDB
 import com.idetidev.usercase.model.User
-import org.jetbrains.exposed.sql.ResultRow
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
+import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.statements.InsertStatement
+import org.jetbrains.exposed.sql.transactions.transaction
+
 
 class RepositoryImpl : Repository {
     override suspend fun addUser (email: String,
@@ -39,10 +40,13 @@ class RepositoryImpl : Repository {
         )
     }
 
-
     override suspend fun findUser(userId: Int)= dbQuery{
         UserDB.select { UserDB.userId.eq(userId) }
             .map { rowToUser(it) }.singleOrNull()
+    }
+
+    override suspend fun findUser(userName: String, passwordHash: String) = dbQuery {
+        UserDB.select({ UserDB.userName.eq(userName) and UserDB.passwordHash.eq(passwordHash)}).map { rowToUser(it) }.singleOrNull()
     }
 
     override suspend fun findUserByEmail(email: String) = dbQuery {
@@ -51,6 +55,15 @@ class RepositoryImpl : Repository {
     }
 
     override suspend fun deleteUser(userId: Int) {
+
+    }
+
+    override suspend fun saveToken(token: String, userName: String) {
+        transaction {
+            UserDB.update({UserDB.userName.eq(userName)}){
+                it[jwtToken] = token
+            }
+        }
 
     }
 }

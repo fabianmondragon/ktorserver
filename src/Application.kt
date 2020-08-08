@@ -3,8 +3,12 @@ package com.idetidev
 import com.idetidev.auth.JwtService
 import com.idetidev.auth.MySession
 import com.idetidev.auth.hash
+import com.idetidev.coach.data.datasource.CoachRemoteDataSourceImpl
+import com.idetidev.coach.data.repository.CoachRepositoryImpl
+import com.idetidev.coach.repository.data.CoachRepository
 import com.idetidev.data.model.DatabaseFactory
 import com.idetidev.repository.RepositoryImpl
+import com.idetidev.routes.coach
 import com.idetidev.routes.users
 import io.ktor.application.*
 import io.ktor.response.*
@@ -34,11 +38,12 @@ fun Application.module(testing: Boolean = false) {
 
     DatabaseFactory.init()
     val db = RepositoryImpl()
+    val coachRepository = CoachRepositoryImpl(CoachRemoteDataSourceImpl())
     val jwtService = JwtService()
     val hashFunction = { s: String -> hash(s) }
 
     install(Authentication) {
-        jwt("jwt") {
+        jwt {
             verifier(jwtService.verifier)
             realm = "Todo Server"
             validate {
@@ -59,6 +64,10 @@ fun Application.module(testing: Boolean = false) {
 
     routing {
         users(db, jwtService, hashFunction)
+        authenticate {
+            coach(coachRepository, jwtService, hashFunction)
+        }
+
     }
 }
 

@@ -9,7 +9,7 @@ class BaseResponse<T> {
     var customCode: Int
 
 
-    constructor(response: T,
+    constructor(response: T?,
                 codeResponse: HttpStatusCode,
                 customCode: Int
     ) {
